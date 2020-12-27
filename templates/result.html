@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Result</title>
+</head>
+<body>
+{% if error %}
+<h1>Error</h1>
+{% endif%}
+{% if not error %}
+<h1>Success</h1>
+<h3>Result:</h3>
+<img src="data:image/png;base64,{{ result_img }}" />
+{% endif %}
+
+</body>
+</html>
