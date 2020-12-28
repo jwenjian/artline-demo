@@ -4,10 +4,32 @@ from uuid import uuid1
 
 import PIL.Image
 import torchvision.transforms as T
+import matplotlib
+
+# use Agg as backend to not show image in server：
+# https://stackoverflow.com/questions/9622163/save-plot-to-image-file-instead-of-displaying-it-using-matplotlib
+matplotlib.use('Agg')
 from fastai.vision import *
 from fastai.vision import load_learner
 from flask import Flask, request, render_template
 from core import FeatureLoss
+
+learn = None
+
+
+# singleton start
+def load_pkl(self) -> Any:
+    global learn
+    path = Path(".")
+    learn = load_learner(path, 'ArtLine_650.pkl')
+
+
+PklLoader = type('PklLoader', (), {"load_pkl": load_pkl})
+pl = PklLoader()
+pl.load_pkl()
+
+
+# singleton end
 
 def demo_show(the_img: Image, ax: plt.Axes = None, figsize: tuple = (3, 3), title: Optional[str] = None,
               hide_axis: bool = True,
@@ -26,9 +48,6 @@ if not (os.path.exists('./ArtLine_650.pkl')):
     MODEL_URL = "https://www.dropbox.com/s/starqc9qd2e1lg1/ArtLine_650.pkl?dl=1"
     urllib.request.urlretrieve(MODEL_URL, "ArtLine_650.pkl")
 
-path = Path(".")
-learn = load_learner(path, 'ArtLine_650.pkl')
-
 app = Flask(__name__)
 
 
@@ -45,8 +64,6 @@ def read_img_file_as_base64(local_file) -> str:
         return base64_str.decode()
 
 
-
-
 @app.route('/result', methods=["POST"])
 def result_view():
     f = request.files['uimg']
@@ -59,16 +76,13 @@ def result_view():
 
     try:
         img = PIL.Image.open(local_file)
-        # img = PIL.Image.open(BytesIO(f)).convert("RGB")
         img_t = T.ToTensor()(img)
         img_fast = Image(img_t)
 
         p, img_hr, b = learn.predict(img_fast)
         r = Image(img_hr)
-        # r.show(figsize=(8,8))
         demo_show(r, figsize=(8, 8), out_file=local_filename)
         result_img_base64 = read_img_file_as_base64('result/' + local_filename)
-        print('done')
     except Exception  as e:
         return render_template('result.html', error=True)
     finally:
